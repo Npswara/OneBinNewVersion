@@ -1,0 +1,214 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches Firebase Auth UID)
+    // Fields:
+    //   - displayName: string (required) - The user's name
+    //   - photoURL: string (optional) - Profile picture URL or base64
+    //   - totalEarnings: number (required) - Total money earned
+    //   - totalTransactions: number (required) - Total number of deposits
+    //   - createdAt: string (required) - ISO date string
+    //   - role: string (optional) - 'admin' or 'user'
+    //
+    // Collection: transactions
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required) - Owner UID
+    //   - amount: number (required) - Earned amount
+    //   - type: string (required) - Waste type
+    //   - date: string (required) - ISO date string
+    //
+    // Collection: posts
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required) - Author UID
+    //   - authorName: string (required) - Author name at post time
+    //   - authorPhoto: string (optional) - Author photo at post time
+    //   - content: string (required) - Post text
+    //   - imageUrl: string (optional) - Attached image
+    //   - createdAt: string (required) - ISO date string
+    //   - likes: number (required) - Like count
+    //   - commentCount: number (required) - Comment count
+    //
+    // Subcollection: posts/{postId}/comments
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required) - Author UID
+    //   - authorName: string (required) - Author name
+    //   - authorPhoto: string (optional) - Author photo
+    //   - content: string (required) - Comment text
+    //   - parentId: string (optional) - For replies
+    //   - createdAt: string (required) - ISO date string
+    //
+    // Subcollection: posts/{postId}/likes
+    // Document ID: {userId}
+    // Fields:
+    //   - userId: string (required) - User who liked
+    //   - createdAt: string (required) - ISO date string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "parameswaranarayana@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['displayName', 'totalEarnings', 'totalTransactions', 'createdAt']) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.totalEarnings is number && data.totalEarnings >= 0 &&
+             data.totalTransactions is number && data.totalTransactions >= 0 &&
+             isValidDateString(data.createdAt) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000000)) && // Allow large base64 but limit to 1MB
+             (!('role' in data) || data.role in ['admin', 'user']);
+    }
+
+    function isValidTransaction(data) {
+      return hasRequiredFields(['userId', 'amount', 'type', 'date']) &&
+             data.userId == request.auth.uid &&
+             data.amount is number &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 50 &&
+             isValidDateString(data.date);
+    }
+
+    function isValidPost(data) {
+      return hasRequiredFields(['userId', 'authorName', 'content', 'createdAt', 'likes', 'commentCount']) &&
+             data.userId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 2000 &&
+             isValidDateString(data.createdAt) &&
+             data.likes is number &&
+             data.commentCount is number &&
+             (!('imageUrl' in data) || (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() < 1000000)));
+    }
+
+    function isValidComment(data) {
+      return hasRequiredFields(['userId', 'authorName', 'content', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
+             isValidDateString(data.createdAt) &&
+             (!('parentId' in data) || (data.parentId == null || data.parentId is string));
+    }
+
+    function isValidLike(data) {
+      return hasRequiredFields(['userId', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Allow reading profiles for leaderboard and community
+      // Note: We assume no PII like email is stored here.
+      allow read: if isAuthenticated();
+      
+      allow create: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'user' || !('role' in request.resource.data));
+      
+      allow update: if isAuthenticated() && 
+                      isValidUser(request.resource.data) && 
+                      (
+                        (isOwner(userId) && request.resource.data.role == resource.data.role) || 
+                        isAdmin()
+                      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      allow create: if isAuthenticated() && 
+                      isValidTransaction(request.resource.data);
+      
+      allow update: if isAdmin();
+      
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      
+      allow create: if isAuthenticated() && 
+                      isValidPost(request.resource.data) &&
+                      request.resource.data.likes == 0 &&
+                      request.resource.data.commentCount == 0;
+      
+      allow update: if isAuthenticated() && (
+                      // Author can update content
+                      (resource.data.userId == request.auth.uid && 
+                       isValidPost(request.resource.data) &&
+                       request.resource.data.likes == resource.data.likes &&
+                       request.resource.data.commentCount == resource.data.commentCount) ||
+                      // Anyone can update likes/comments via increment (but we should be more strict if possible)
+                      // For simplicity in this applet, we allow updates to these fields if the rest is unchanged
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])) ||
+                      isAdmin()
+                    );
+      
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidComment(request.resource.data);
+        allow update: if isAdmin();
+        allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      }
+
+      match /likes/{userId} {
+        allow read: if isAuthenticated();
+        allow create: if isOwner(userId) && isValidLike(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

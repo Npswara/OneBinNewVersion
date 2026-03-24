@@ -1,0 +1,176 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information and statistics.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "The user's profile picture URL (can be base64)."
+        },
+        "totalEarnings": {
+          "type": "number",
+          "description": "Total money earned from waste deposits."
+        },
+        "totalTransactions": {
+          "type": "number",
+          "description": "Total number of waste deposits made."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user account was created."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role in the system."
+        }
+      },
+      "required": ["displayName", "totalEarnings", "totalTransactions", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A record of a waste deposit.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who made the deposit."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount earned from this deposit."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of waste deposited (e.g., organic, recyclable)."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the transaction occurred."
+        }
+      },
+      "required": ["userId", "amount", "type", "date"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A community post shared by a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created the post."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "The name of the author at the time of posting."
+        },
+        "authorPhoto": {
+          "type": "string",
+          "description": "The photo URL of the author at the time of posting."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the post."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "An optional image URL attached to the post."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the post was created."
+        },
+        "likes": {
+          "type": "number",
+          "description": "The number of likes the post has received."
+        },
+        "commentCount": {
+          "type": "number",
+          "description": "The number of comments on the post."
+        }
+      },
+      "required": ["userId", "authorName", "content", "createdAt", "likes", "commentCount"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a community post.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who commented."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "The name of the author at the time of commenting."
+        },
+        "authorPhoto": {
+          "type": "string",
+          "description": "The photo URL of the author at the time of commenting."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the comment."
+        },
+        "parentId": {
+          "type": "string",
+          "description": "The ID of the parent comment (for replies)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the comment was created."
+        }
+      },
+      "required": ["userId", "authorName", "content", "createdAt"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "A like on a community post.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who liked the post."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the like occurred."
+        }
+      },
+      "required": ["userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Waste deposit transactions."
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Community posts."
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments on posts."
+    },
+    "/posts/{postId}/likes/{userId}": {
+      "schema": "Like",
+      "description": "Likes on posts."
+    }
+  }
+}

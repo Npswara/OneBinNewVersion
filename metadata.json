@@ -1,0 +1,5 @@
+{
+  "name": "OneBin",
+  "description": "A waste management education and tracking platform. Teaches about waste types, tracks waste bank earnings, and features a community leaderboard.",
+  "requestFramePermissions": ["camera", "geolocation"]
+}

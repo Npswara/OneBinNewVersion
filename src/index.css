@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-swiss-red: #E62117;
+  --color-swiss-green: #009639;
+  --color-swiss-black: #1A1A1A;
+  --color-swiss-white: #F5F5F5;
+  
+  --spacing-grid: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-swiss-white text-swiss-black font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tighter uppercase;
+  }
+}
+
+@layer components {
+  .swiss-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--spacing-grid);
+  }
+  
+  .swiss-border {
+    @apply border-t border-swiss-black;
+  }
+  
+  .swiss-button {
+    @apply px-6 py-3 bg-swiss-black text-swiss-white font-bold uppercase tracking-widest text-xs hover:bg-swiss-red transition-colors duration-300;
+  }
+  
+  .swiss-button-green {
+    @apply px-6 py-3 bg-swiss-black text-swiss-white font-bold uppercase tracking-widest text-xs hover:bg-swiss-green transition-colors duration-300;
+  }
+  
+  .swiss-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] opacity-50;
+  }
+}
