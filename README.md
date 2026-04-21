@@ -20,8 +20,7 @@ OneBin is a premium, Swiss-inspired waste management education and tracking plat
 - **AI Integration:** [Google Gemini AI](https://ai.google.dev/)
 - **Icons:** [Lucide React](https://lucide.dev/)
 - **Animations:** [Motion](https://motion.dev/)
-- **Charts:** [Recharts](https://recharts.org/)
-
+- 
 ## 📦 Getting Started
 
 ### Prerequisites
